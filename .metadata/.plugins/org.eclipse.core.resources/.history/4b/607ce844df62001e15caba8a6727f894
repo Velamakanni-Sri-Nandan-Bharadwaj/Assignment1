@@ -1,0 +1,330 @@
+import java.io.*;
+import java.util.*;
+
+/**
+ * The A1 class contains helper methods for processing and analyzing text data.
+ */
+public class A1
+{
+	/**
+	 * The main class for text processing and analysis.
+	 */
+	public static void main(String[] args)
+	{
+		// Check if the correct number of command-line arguments is provided
+		if (args.length != 2)
+		{
+			System.err.println("Usage: java A1 input.txt output.txt");
+			System.exit(1);
+		}
+
+		String inputFile = args[0];
+		String outputFile = args[1];
+
+		try
+		{
+			// Initialize a BufferedReader to read the input file
+			BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+
+			// Initialize a BufferedWriter to write the output file
+			BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile));
+
+			// Initialize lists and variables for processing
+			List<Token> tokens = new ArrayList<>();
+			List<String> stopWords = Arrays.asList(getStopWords());
+
+			String line;
+			int totalWords = 0;
+			int stopWordCount = 0;
+
+			// Create a map to store word frequencies
+			Map<String, Integer> tokenFrequencyMap = new HashMap<>();
+
+			// Read the input file line by line
+			while ((line = reader.readLine()) != null)
+			{
+				String[] words = line.split("\\s+"); // Split by spaces
+
+				for (String word : words)
+				{
+					// Process and clean the word
+					word = processWord(word);
+
+					if (!word.isEmpty())
+					{
+						totalWords++;
+
+						if (!isStopWord(word, stopWords))
+						{
+							// Check if the word is already in the map
+							if (tokenFrequencyMap.containsKey(word))
+							{
+								// Increment the frequency
+								tokenFrequencyMap.put(word, tokenFrequencyMap.get(word) + 1);
+							}
+							else
+							{
+								// Add the word to the map with a frequency of 1
+								tokenFrequencyMap.put(word, 1);
+							}
+						}
+						else
+						{
+							stopWordCount++;
+						}
+					}
+				}
+			}
+
+			// Close the input file
+			reader.close();
+
+			// Create Token objects based on the map entries and add them to the tokens list
+			for (Map.Entry<String, Integer> entry : tokenFrequencyMap.entrySet())
+			{
+				Token token = new Token(entry.getKey());
+				token.setFrequency(entry.getValue());
+				tokens.add(token);
+			}
+
+			// Sort the tokens in descending order by frequency and then alphabetically
+			Collections.sort(tokens, new Comparator<Token>()
+			{
+				@Override
+				public int compare(Token t1, Token t2)
+				{
+					int freqComparison = Integer.compare(t2.getFrequency(), t1.getFrequency());
+					if (freqComparison != 0)
+					{
+						return freqComparison;
+					}
+					return t1.getWord().compareTo(t2.getWord());
+				}
+			});
+
+			// Write the statistics to the output file
+			writer.write("Total Words: " + totalWords + "\n");
+			writer.write("Unique Words: " + tokens.size() + "\n");
+			writer.write("Stop Words: " + stopWordCount + "\n\n");
+
+			writer.write("10 Most Frequent\n");
+			writeTopWords(writer, tokens, 10);
+
+			writer.write("\n10 Least Frequent\n");
+			writeLeastFrequentWords(writer, tokens, 10);
+
+			writer.write("\nAll\n");
+			writeAllWords(writer, tokens);
+
+			// Close the output file
+			writer.close();
+		}
+		catch (IOException e)
+		{
+			System.err.println("Error reading/writing files: " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Helper method to process and clean a word.
+	 *
+	 * @param word The input word to be processed.
+	 * @return The processed word with leading/trailing whitespace removed and
+	 *         converted to lowercase.
+	 */
+	private static String processWord(String word)
+	{
+		return word.trim().toLowerCase().replaceAll("[^a-zA-Z]", "");
+	}
+
+	/**
+	 * Helper method to check if a word is a stop word.
+	 *
+	 * @param word      The word to check.
+	 * @param stopWords A list of stop words to compare against.
+	 * @return True if the word is a stop word, false otherwise.
+	 */
+	private static boolean isStopWord(String word, List<String> stopWords)
+	{
+		return stopWords.contains(word);
+	}
+
+	/**
+	 * Helper method to write the top N words to the output.
+	 *
+	 * @param writer The BufferedWriter used for writing output.
+	 * @param tokens A list of Token objects.
+	 * @param count  The number of top words to write.
+	 * @throws IOException If there is an issue writing to the output.
+	 */
+	private static void writeTopWords(BufferedWriter writer, List<Token> tokens, int count) throws IOException
+	{
+		for (int i = 0; i < Math.min(count, tokens.size()); i++)
+		{
+			String word = tokens.get(i).getWord();
+			int frequency = tokens.get(i).getFrequency();
+			writer.write(word + " : " + frequency + "\n");
+		}
+	}
+
+	/**
+	 * Helper method to write the least N frequent words to the output.
+	 *
+	 * @param writer The BufferedWriter used for writing output.
+	 * @param tokens A list of Token objects.
+	 * @param count  The number of least frequent words to write.
+	 * @throws IOException If there is an issue writing to the output.
+	 */
+	private static void writeLeastFrequentWords(BufferedWriter writer, List<Token> tokens, int count) throws IOException
+	{
+		// Sort the tokens in ascending order by frequency and then alphabetically
+		Collections.sort(tokens, new Comparator<Token>()
+		{
+			@Override
+			public int compare(Token t1, Token t2)
+			{
+				int freqComparison = Integer.compare(t1.getFrequency(), t2.getFrequency());
+				if (freqComparison != 0)
+				{
+					return freqComparison;
+				}
+				return t1.getWord().compareTo(t2.getWord());
+			}
+		});
+
+		// Write the least frequent words to the output
+		for (int i = 0; i < Math.min(count, tokens.size()); i++)
+		{
+			String word = tokens.get(i).getWord();
+			int frequency = tokens.get(i).getFrequency();
+			writer.write(word + " : " + frequency + "\n");
+		}
+	}
+
+	/**
+	 * Helper method to write all words to the output.
+	 *
+	 * @param writer The BufferedWriter used for writing output.
+	 * @param tokens A list of Token objects.
+	 * @throws IOException If there is an issue writing to the output.
+	 */
+	private static void writeAllWords(BufferedWriter writer, List<Token> tokens) throws IOException
+	{
+		// Sort the tokens alphabetically
+		Collections.sort(tokens, new Comparator<Token>()
+		{
+			@Override
+			public int compare(Token t1, Token t2)
+			{
+				return t1.getWord().compareTo(t2.getWord());
+			}
+		});
+
+		// Write all words to the output
+		for (Token token : tokens)
+		{
+			String word = token.getWord();
+			int frequency = token.getFrequency();
+			writer.write(word + " : " + frequency + "\n");
+		}
+	}
+
+	/**
+	 * Returns an array of stop words.
+	 *
+	 * @return An array of common stop words.
+	 */
+	private static String[] getStopWords()
+	{
+		return new String[]
+		{ "a", "about", "all", "am", "an", "and", "any", "are", "as", "at", "be", "been", "but", "by", "can", "cannot",
+				"could", "did", "do", "does", "else", "for", "from", "get", "got", "had", "has", "have", "he", "her",
+				"hers", "him", "his", "how", "i", "if", "in", "into", "is", "it", "its", "like", "more", "me", "my",
+				"no", "now", "not", "of", "on", "one", "or", "our", "out", "said", "say", "says", "she", "so", "some",
+				"than", "that", "the", "their", "them", "then", "there", "these", "they", "this", "to", "too", "us",
+				"upon", "was", "we", "were", "what", "with", "when", "where", "which", "while", "who", "whom", "why",
+				"will", "you", "your" };
+	}
+}
+
+/**
+ * The Token class represents a word and its frequency in a text document.
+ */
+class Token
+{
+	private String word; // The word itself
+	private int frequency; // The frequency of the word in the document
+
+	/**
+	 * Constructor to create a Token object with an initial frequency of 1.
+	 * 
+	 * @param word The word to be stored as a token.
+	 */
+	public Token(String word)
+	{
+		this.word = word;
+		this.frequency = 1;
+	}
+
+	/**
+	 * Get the word associated with this token.
+	 * 
+	 * @return The word.
+	 */
+	public String getWord()
+	{
+		return word;
+	}
+
+	/**
+	 * Get the frequency of the word in the document.
+	 * 
+	 * @return The frequency.
+	 */
+	public int getFrequency()
+	{
+		return frequency;
+	}
+
+	/**
+	 * Set the frequency of the word in the document.
+	 * 
+	 * @param frequency The new frequency value to set.
+	 */
+	public void setFrequency(int frequency)
+	{
+		this.frequency = frequency;
+	}
+
+	/**
+	 * Override the equals method to compare two Token objects based on their words.
+	 * 
+	 * @param obj The object to compare to this Token.
+	 * @return True if the objects are equal (have the same word), false otherwise.
+	 */
+	@Override
+	public boolean equals(Object obj)
+	{
+		if (this == obj)
+		{
+			return true;
+		}
+		if (obj == null || getClass() != obj.getClass())
+		{
+			return false;
+		}
+		Token token = (Token) obj;
+		return word.equals(token.word);
+	}
+
+	/**
+	 * Override the hashCode method to generate a hash code based on the word.
+	 * 
+	 * @return The hash code for this Token.
+	 */
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(word);
+	}
+}

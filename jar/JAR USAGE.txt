@@ -1,0 +1,1 @@
+java -jar A1.jar input1.txt output1.txt
